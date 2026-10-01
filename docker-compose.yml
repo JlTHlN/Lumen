@@ -4,7 +4,8 @@ services:
     image: reelmark:latest
     container_name: media-tracker
     restart: unless-stopped
-    command: sh -c "npx prisma db push && npm run start"
+    # Changed to use the absolute local binary path instead of npx
+    command: sh -c "./node_modules/.bin/prisma db push && npm run start"
     ports:
       - "3050:3000"
     environment:
@@ -30,4 +31,3 @@ services:
 volumes:
   app_data:
   postgres_data:
-
