@@ -1,4 +1,4 @@
-import { fail, ok, withDb } from "@/lib/api";
+import { fail, ok } from "@/lib/api";
 import { getLibrary, getLists, getRecentActivity, getStats, getUpcoming, getUpNext, getUpcomingReleases } from "@/lib/library";
 import { getDiscovery } from "@/lib/providers";
 import { getSettings, publicSettings } from "@/lib/settings";
@@ -10,7 +10,6 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    return ok(await withDb(async () => {
     const [settings, library, upNext, upcoming, activity, movieStats, tvStats, gameStats, popMovies, popShows, popGames, upMovies, upGames, unread, allLists] =
       await Promise.all([
         getSettings(),
@@ -36,7 +35,7 @@ export async function GET() {
     const pick = (type: MediaType, statuses: string[], limit = 8) =>
       library.filter((item) => item.media.type === type && item.entry && statuses.includes(item.entry.status)).slice(0, limit);
 
-    return {
+    return ok({
       settings: publicSettings(settings),
       upNext: upNext.slice(0, 12),
       continueWatching: upNext.filter((item) => item.started).slice(0, 12),
@@ -62,26 +61,8 @@ export async function GET() {
         Number((movieStats as Record<string, unknown>).watched ?? 0) +
         Number((tvStats as Record<string, unknown>).episodesWatched ?? 0) +
         Number((gameStats as Record<string, unknown>).gamesCompleted ?? 0),
-    };
-    }));
-  } catch (error) {
-    return fail(await describeDashboardProblem(), 503);
-  }
-}
-
-/** Explains the likely cause instead of a dead generic message. */
-async function describeDashboardProblem(): Promise<string> {
-  try {
-    const { schemaStatus, pingDatabase } = await import("@/db/startup");
-    if (!(await pingDatabase())) {
-      return "The database isn't reachable, so your dashboard can't load. Check the db service is running, then reload.";
-    }
-    const status = schemaStatus();
-    if (!status.ready) {
-      return `The database tables haven't been created yet. ${status.error ?? ""} Restart the app container and it will set itself up.`.trim();
-    }
+    });
   } catch {
-    /* fall through */
+    return fail("We couldn't load your dashboard right now.", 503);
   }
-  return "We couldn't load your dashboard right now. Your library is safe — try reloading.";
 }
