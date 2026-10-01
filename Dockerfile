@@ -3,7 +3,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 COPY . .
 # DATABASE_URL is only needed at runtime; a placeholder keeps the build happy.
 ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/mediatracker
