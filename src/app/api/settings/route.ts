@@ -1,13 +1,31 @@
-import { fail, ok } from "@/lib/api";
+import { fail, ok, withDb } from "@/lib/api";
 import { getSettings, publicSettings, saveSettings } from "@/lib/settings";
 import { cacheStats, clearCache, humanBytes } from "@/lib/cache";
 import { igdbProvider, rawgProvider, tmdbProvider } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
 
+/** Explains why a save failed instead of an opaque error. */
+async function describeSaveProblem(error: unknown): Promise<string> {
+  try {
+    const { schemaStatus, pingDatabase } = await import("@/db/startup");
+    if (!(await pingDatabase())) {
+      return "Can't reach the database, so nothing was saved. Check the db service and reload.";
+    }
+    const status = schemaStatus();
+    if (!status.ready) {
+      return `Settings can't be saved because the database tables are missing. ${status.error ?? ""} Restart the app container to run setup.`.trim();
+    }
+  } catch {
+    /* fall through */
+  }
+  void error;
+  return "We couldn't save that setting. Your library is unaffected — try again.";
+}
+
 export async function GET() {
   try {
-    const settings = await getSettings();
+    const settings = await withDb(getSettings);
     const cache = await cacheStats();
     const [tmdb, igdb, rawg] = await Promise.all([
       tmdbProvider.isConfigured(),
@@ -45,6 +63,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    await withDb(async () => getSettings());
     if (body.action === "clear_cache") {
       const scope = (body.patch?.scope as string) ?? "all";
       await clearCache(scope === "images" ? "discovery" : (scope as "all" | "metadata" | "discovery"));
@@ -52,9 +71,9 @@ export async function POST(request: Request) {
       return ok({ cleared: true, cache: { ...cache, cacheHuman: humanBytes(cache.bytes) } });
     }
 
-    const settings = await saveSettings(body.patch ?? {});
-    return ok({ settings: publicSettings(settings) });
-  } catch {
-    return fail("We couldn't save that setting.", 500);
+    const saved = await withDb(() => saveSettings(body.patch ?? {}));
+    return ok({ settings: publicSettings(saved) });
+  } catch (error) {
+    return fail(await describeSaveProblem(error), 503);
   }
 }

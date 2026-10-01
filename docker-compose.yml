@@ -1,20 +1,4 @@
 services:
-  app:
-    build: .
-    image: reelmark:latest
-    container_name: media-tracker
-    restart: unless-stopped
-    ports:
-      - "3050:3000"
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/mediatracker
-      APP_SECRET: ${APP_SECRET:-change-me-in-production}
-      TZ: ${TZ:-UTC}
-    volumes:
-      - app_data:/app/data
-    depends_on:
-      - db
-
   db:
     image: postgres:16-alpine
     container_name: media-tracker-db
@@ -25,6 +9,31 @@ services:
       POSTGRES_DB: mediatracker
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mediatracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  app:
+    build: .
+    image: reelmark:latest
+    container_name: media-tracker
+    restart: unless-stopped
+    ports:
+      - "3050:3000"
+    environment:
+      # Service name `db` and database name must match the db service above.
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/mediatracker
+      # Set this once and never change it: saved API keys are encrypted with it.
+      APP_SECRET: ${APP_SECRET:-change-me-in-production}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   app_data:

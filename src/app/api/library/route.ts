@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { mediaItems, watchEvents } from "@/db/schema";
-import { asMediaType, fail, ok } from "@/lib/api";
+import { asMediaType, fail, ok, withDb } from "@/lib/api";
 import {
   applyStatus,
   countWatches,
@@ -52,13 +52,15 @@ export async function GET(request: Request) {
   const typeParam = url.searchParams.get("type");
   const statusParam = url.searchParams.get("status");
   try {
-    const items = await getLibrary({
+    const items = await withDb(() =>
+      getLibrary({
       type: typeParam ? asMediaType(typeParam) : undefined,
       status: statusParam ? statusParam.split(",").filter(Boolean) : undefined,
       favoritesOnly: url.searchParams.get("favorites") === "1",
       search: url.searchParams.get("q") ?? undefined,
-      limit: Math.min(500, Number(url.searchParams.get("limit") ?? 300) || 300),
-    });
+        limit: Math.min(500, Number(url.searchParams.get("limit") ?? 300) || 300),
+      }),
+    );
     return ok({ items });
   } catch {
     return fail("We couldn't load your library right now.", 503, { items: [] });

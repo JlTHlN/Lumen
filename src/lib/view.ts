@@ -169,6 +169,14 @@ export interface SettingsData {
   };
 }
 
+export interface HealthData {
+  status: "ok" | "degraded";
+  database: string;
+  schema: string;
+  version: string;
+  detail?: string;
+}
+
 export interface NotificationsData {
   items: Array<{
     id: number;

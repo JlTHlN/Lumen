@@ -4,13 +4,22 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { apiPost, useApi } from "@/lib/client";
 import { Button, Card, Chip, PageHeader, SectionHeader, Skeleton, Tabs } from "@/components/ui";
-import type { SettingsData } from "@/lib/view";
-import { IconArrowRight, IconCheck, IconCheckCircle, IconWarning, IconX } from "@/components/icons";
+import type { HealthData, SettingsData } from "@/lib/view";
+import {
+  IconArrowRight,
+  IconCheck,
+  IconCheckCircle,
+  IconDatabase,
+  IconWarning,
+  IconX,
+} from "@/components/icons";
+import { BRAND, LumenMark } from "@/components/brand";
 
 type TestState = { status: string; message: string } | null;
 
 export default function SettingsPage() {
   const { data, refresh } = useApi<SettingsData>("/api/settings");
+  const health = useApi<HealthData>("/api/health");
   const [tab, setTab] = useState("profile");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -109,6 +118,31 @@ export default function SettingsPage() {
       />
 
       {notice ? <Card className="border-purple/40 bg-purple/10 p-3 text-sm text-ink">{notice}</Card> : null}
+
+      <Card
+        className={`flex flex-wrap items-center justify-between gap-3 p-4 ${
+          health.data && health.data.status !== "ok" ? "border-bad/50 bg-bad/10" : ""
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${health.data?.status === "ok" ? "bg-purple/15 text-glow" : "bg-bad/15 text-bad"}`}>
+            {health.data?.status === "ok" ? <IconDatabase size={18} /> : <IconWarning size={18} />}
+          </span>
+          <div>
+            <p className="text-sm font-bold text-ink">System</p>
+            <p className="text-xs text-muted">
+              {health.loading && !health.data
+                ? "Checking database…"
+                : health.data?.status === "ok"
+                  ? `Database connected · schema ready · v${health.data.version}`
+                  : (health.data?.detail as string) ?? "Database or schema unavailable — restart the app container to run setup."}
+            </p>
+          </div>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => health.refresh()}>
+          Recheck
+        </Button>
+      </Card>
 
       {tab === "profile" ? (
         <Card className="space-y-4 p-4">
