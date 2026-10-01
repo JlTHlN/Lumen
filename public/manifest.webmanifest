@@ -1,0 +1,14 @@
+{
+  "name": "Lumen",
+  "short_name": "Lumen",
+  "description": "The diary that remembers what you watched.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0714",
+  "theme_color": "#0b0714",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "type": "image/png", "sizes": "180x180", "purpose": "maskable any" }
+  ]
+}

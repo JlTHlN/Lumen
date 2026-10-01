@@ -1,0 +1,38 @@
+services:
+  app:
+    build: .
+    image: reelmark:latest
+    container_name: media-tracker
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Infrastructure only — API keys are configured in the web UI.
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/mediatracker
+      APP_SECRET: ${APP_SECRET:-change-me-in-production}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: media-tracker-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mediatracker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mediatracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  app_data:
+  postgres_data:
