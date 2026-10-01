@@ -5,17 +5,15 @@ services:
     container_name: media-tracker
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3050:3000"  # <--- Changed from 3000:3000 to avoid conflicts
     environment:
-      # Infrastructure only — API keys are configured in the web UI.
       DATABASE_URL: postgresql://postgres:postgres@db:5432/mediatracker
       APP_SECRET: ${APP_SECRET:-change-me-in-production}
       TZ: ${TZ:-UTC}
     volumes:
       - app_data:/app/data
     depends_on:
-      db:
-        condition: service_healthy
+      - db
 
   db:
     image: postgres:16-alpine
@@ -27,12 +25,8 @@ services:
       POSTGRES_DB: mediatracker
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d mediatracker"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
 
 volumes:
   app_data:
   postgres_data:
+
